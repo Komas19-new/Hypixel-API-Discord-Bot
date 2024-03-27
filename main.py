@@ -27,6 +27,14 @@ default_headers = {
 async def on_ready():
     print(f'We have logged in as {bot.user}')
     
+async def send_ratelimit_embed(interaction: discord.Interaction):
+    embed = discord.Embed(
+        title="Rate Limit Exceeded",
+        description="We are being rate limited. Please try again later.",
+        color=discord.Color.red()
+    )
+    embed.set_footer(text="Hypixel API Bot is not affiliated or endorsed by Hypixel")
+    await send_interaction_response(interaction, content='', embed=embed)
 
 async def get_uuid(plr_name):
     uuid = await bot.loop.run_in_executor(None, mojang_api.get_uuid, plr_name)
@@ -150,8 +158,10 @@ async def banstats(interaction: discord.Interaction):
         return
     request = requests.get("https://api.hypixel.net/v2/punishmentstats", headers=default_headers)
     data = request.json()
-    
-    if request.status_code == 200:
+    if request.status_code == 429:  # Rate limit exceeded
+        await send_ratelimit_embed(interaction)
+        return
+    elif request.status_code == 200:
         embed = discord.Embed(title="Ban Stats", color=discord.Color.green())
         embed.add_field(name="Watchdog", value=f"Last Day: {data['watchdog_rollingDaily']}\nTotal: {data['watchdog_total']}", inline=False)
         embed.add_field(name="Staff", value=f"Last Day: {data['staff_rollingDaily']}\nTotal: {data['staff_total']}", inline=False)
@@ -170,7 +180,10 @@ async def playerinfo(interaction: discord.Interaction, plrname: str):
     uuid = await get_uuid(plrname)
     request = requests.get(f"https://api.hypixel.net/v2/player?uuid={uuid}", headers=default_headers)
     data = request.json()
-    if request.status_code == 200:
+    if request.status_code == 429:  # Rate limit exceeded
+        await send_ratelimit_embed(interaction)
+        return
+    elif request.status_code == 200:
         embed = discord.Embed(title="Player Info", color=discord.Color.green())
         embed.add_field(name="Player Name", value=f"{data['player']['displayname']}", inline=False)
         if 'rank' in data['player']:
@@ -201,7 +214,10 @@ async def recentgames(interaction: discord.Interaction, plrname: str, count: int
     uuid = await get_uuid(plrname)
     request = requests.get(f"https://api.hypixel.net/v2/recentgames?uuid={uuid}", headers=default_headers)
     data = request.json()
-    if request.status_code == 200:
+    if request.status_code == 429:  # Rate limit exceeded
+        await send_ratelimit_embed(interaction)
+        return
+    elif request.status_code == 200:
         games = data.get("games", [])
         if not games:
             embed = discord.Embed(title="Recent Games", color=discord.Color.red())
@@ -238,7 +254,10 @@ async def status(interaction: discord.Interaction, plrname: str):
     uuid = await get_uuid(plrname)
     request = requests.get(f"https://api.hypixel.net/v2/status?uuid={uuid}", headers=default_headers)
     data = request.json()
-    if request.status_code == 200:
+    if request.status_code == 429:  # Rate limit exceeded
+        await send_ratelimit_embed(interaction)
+        return
+    elif request.status_code == 200:
         embed = discord.Embed(title="Player Status", color=discord.Color.green())
         if data['session']['online']:
             embed.add_field(name="Online", value=f"{data['session']['online']}", inline=False)
@@ -281,7 +300,10 @@ async def guildinfo(interaction: discord.Interaction, player: str = None, id: st
     # Execute HTTP request
     request = requests.get(url)
 
-    if request.status_code == 200:
+    if request.status_code == 429:  # Rate limit exceeded
+        await send_ratelimit_embed(interaction)
+        return
+    elif request.status_code == 200:
         data = request.json()
         guild_info = data.get("guild")
 
